@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { normalizeResults } from './functions/lib/normalize'
@@ -27,13 +28,21 @@ function localApiPlugin(): Plugin {
           if (!apiKey) {
             res.statusCode = 401
             res.setHeader('Content-Type', 'application/json')
+            const isSearch = req.url.startsWith('/api/search')
             res.end(
-              JSON.stringify({
-                success: false,
-                query: '',
-                jobs: [],
-                error: 'Missing X-Firecrawl-Key header (BYOK).',
-              }),
+              JSON.stringify(
+                isSearch
+                  ? {
+                      success: false,
+                      query: '',
+                      jobs: [],
+                      error: 'Missing X-Firecrawl-Key header (BYOK).',
+                    }
+                  : {
+                      success: false,
+                      error: 'Missing X-Firecrawl-Key header (BYOK).',
+                    },
+              ),
             )
             return
           }
@@ -243,5 +252,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+  },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts', 'functions/**/*.test.ts'],
   },
 })

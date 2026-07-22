@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "pages:dev": "npm run build && wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=job-scout"
@@ -16,7 +18,7 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260722.0",
+    "@cloudflare/workers-types": "^5.20260722.1",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -24,6 +26,7 @@
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
+    "vitest": "^4.1.10",
     "wrangler": "^4.113.0"
   }
 }
