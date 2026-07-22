@@ -38,6 +38,10 @@ export function SearchForm({ filters, loading, onChange, onSubmit }: Props) {
   }
 
   const preview = buildSearchQuery(filters)
+  const fanOutPreview =
+    filters.fanOutBoards && filters.boards.length > 1
+      ? ` · fan-out ×${Math.min(filters.boards.length, 8)} boards`
+      : ''
 
   return (
     <section className="panel">
@@ -188,6 +192,18 @@ export function SearchForm({ filters, loading, onChange, onSubmit }: Props) {
         <label className="check span-2">
           <input
             type="checkbox"
+            checked={filters.fanOutBoards}
+            onChange={(e) => set('fanOutBoards', e.target.checked)}
+          />
+          <span>
+            Fan out per board (one Firecrawl query per selected board, merge &amp; rank) —
+            better coverage, uses more credits when multiple boards are selected
+          </span>
+        </label>
+
+        <label className="check span-2">
+          <input
+            type="checkbox"
             checked={filters.scrapeContent}
             onChange={(e) => set('scrapeContent', e.target.checked)}
           />
@@ -197,7 +213,7 @@ export function SearchForm({ filters, loading, onChange, onSubmit }: Props) {
         </label>
 
         <div className="query-preview span-2">
-          <span className="label">Query preview</span>
+          <span className="label">Query preview{fanOutPreview}</span>
           <code>{preview || 'Add titles or keywords to build a query…'}</code>
         </div>
 

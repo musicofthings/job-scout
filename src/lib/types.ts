@@ -13,6 +13,8 @@ export interface SearchFilters {
   timeRange: TimeRange
   limit: number
   scrapeContent: boolean
+  /** When true and multiple boards selected, run one Firecrawl query per board then merge. */
+  fanOutBoards: boolean
   boards: string[]
 }
 
@@ -28,16 +30,23 @@ export interface JobPosting {
   salaryHint?: string
   tags: string[]
   markdown?: string
+  /** Optional listing art — rendered with lazy loading when present. */
+  imageUrl?: string
+  /** Client-side relevance score after ranking. */
+  score?: number
 }
 
 export interface SearchResponse {
   success: boolean
   query: string
+  /** Individual queries when board fan-out ran multiple searches. */
+  queries?: string[]
   jobs: JobPosting[]
   creditsUsed?: number
   warning?: string
   error?: string
   rawCount?: number
+  fanOutCount?: number
 }
 
 export interface ScrapeJobResponse {
@@ -130,6 +139,7 @@ export const DEFAULT_FILTERS: SearchFilters = {
   timeRange: 'month',
   limit: 12,
   scrapeContent: false,
+  fanOutBoards: true,
   boards: ['greenhouse', 'lever', 'ashby', 'wellfound', 'remoteok'],
 }
 

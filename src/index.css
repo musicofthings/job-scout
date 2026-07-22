@@ -1,31 +1,96 @@
-:root {
-  color-scheme: dark;
-  --bg: #070b12;
-  --panel: #0e1522;
-  --input: #111a2a;
-  --border: #243147;
-  --text: #e8eef8;
-  --muted: #93a0b8;
-  --accent: #5eead4;
-  --accent-2: #7dd3fc;
-  --ok: #86efac;
-  --warn: #fbbf24;
-  --danger: #f87171;
-  --code-bg: #0a101b;
-  --shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+/* Sensa-inspired design tokens: warm paper light, deep ink dark, serif + Inter */
+:root,
+html[data-theme='light'] {
+  color-scheme: light;
+  --bg: #fbf8f2;
+  --bg-wash: #fff5e8;
+  --panel: #fffcf7;
+  --input: #ffffff;
+  --border: #e8e0d4;
+  --border-strong: #d2c3c0;
+  --text: #221510;
+  --muted: #6b635a;
+  --accent: #ff6b53;
+  --accent-2: #050142;
+  --accent-soft: #fce38f;
+  --sky: #e6f3fe;
+  --blush: #feb3c8;
+  --mint: #e8f6ee;
+  --ok: #1d6128;
+  --warn: #67300b;
+  --danger: #750202;
+  --code-bg: #f3ede4;
+  --shadow: 0 18px 50px rgba(34, 21, 16, 0.06);
+  --shadow-soft: 0 1px 0 rgba(34, 21, 16, 0.04);
+  --banner-error-fg: #750202;
+  --banner-warn-fg: #67300b;
+  --logo-fg: #fffcf7;
+  --btn-primary-bg: #050142;
+  --btn-primary-fg: #fffcf7;
+  --btn-primary-hover: #1a1460;
+  --chip-active-bg: #050142;
+  --chip-active-fg: #fffcf7;
+  --focus-ring: color-mix(in oklab, var(--accent) 35%, transparent);
+  --radius-sm: 0.55rem;
+  --radius-md: 0.9rem;
+  --radius-lg: 1.35rem;
+  --radius-pill: 999px;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Averia Serif Libre', 'Times New Roman', Georgia, serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
+  --space-page: clamp(1.25rem, 4vw, 3.5rem);
+  --max-width: 1240px;
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  line-height: 1.55;
   font-weight: 400;
   color: var(--text);
   background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(94, 234, 212, 0.12), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, rgba(125, 211, 252, 0.1), transparent 50%),
+    radial-gradient(900px 480px at 8% -8%, color-mix(in oklab, var(--accent-soft) 55%, transparent), transparent 60%),
+    radial-gradient(700px 420px at 100% 0%, color-mix(in oklab, var(--sky) 70%, transparent), transparent 55%),
+    radial-gradient(600px 360px at 70% 100%, color-mix(in oklab, var(--blush) 28%, transparent), transparent 50%),
     var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #050142;
+  --bg-wash: #0a0758;
+  --panel: #0c0a4a;
+  --input: #12105a;
+  --border: color-mix(in oklab, #fff 12%, #050142);
+  --border-strong: color-mix(in oklab, #fff 18%, #050142);
+  --text: #fcfff1;
+  --muted: color-mix(in oklab, #fcfff1 62%, #6a48ce);
+  --accent: #ff6b53;
+  --accent-2: #fce38f;
+  --accent-soft: #ffd967;
+  --sky: #1f4e98;
+  --blush: #610033;
+  --mint: #1d6128;
+  --ok: #86efac;
+  --warn: #ffd967;
+  --danger: #feb3c8;
+  --code-bg: #0a0850;
+  --shadow: 0 22px 50px rgba(0, 0, 0, 0.35);
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.04);
+  --banner-error-fg: #feb3c8;
+  --banner-warn-fg: #fce38f;
+  --logo-fg: #050142;
+  --btn-primary-bg: #ff6b53;
+  --btn-primary-fg: #050142;
+  --btn-primary-hover: #ff8572;
+  --chip-active-bg: #fce38f;
+  --chip-active-fg: #050142;
+  --focus-ring: color-mix(in oklab, var(--accent) 40%, transparent);
+  background:
+    radial-gradient(900px 500px at 0% -10%, color-mix(in oklab, #6f45d6 35%, transparent), transparent 55%),
+    radial-gradient(700px 420px at 100% 0%, color-mix(in oklab, #1f4e98 40%, transparent), transparent 50%),
+    var(--bg);
 }
 
 *,
@@ -42,10 +107,18 @@ body,
 
 body {
   margin: 0;
+  background: transparent;
+  color: var(--text);
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent-soft) 70%, transparent);
+  color: var(--text);
 }

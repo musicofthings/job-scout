@@ -1,28 +1,60 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ApiKeyPanel } from './components/ApiKeyPanel'
 import { ResultsList } from './components/ResultsList'
+import { SavedSearches } from './components/SavedSearches'
 import { SearchForm } from './components/SearchForm'
+import { ThemeToggle } from './components/ThemeToggle'
 import { downloadText, enrichJob, exportJobsCsv, searchJobs } from './lib/api'
+import {
+  DEFAULT_VIEW_FILTERS,
+  filterAndSortJobs,
+  type ResultViewFilters,
+} from './lib/ranking'
+import {
+  createSavedSearch,
+  deleteSavedSearch,
+  loadSavedSearches,
+  persistSavedSearches,
+  type SavedSearch,
+  upsertSavedSearch,
+} from './lib/savedSearches'
 import { FILTERS_KEY, loadApiKey, loadJson, saveApiKey, saveJson } from './lib/storage'
+import { applyTheme, DEFAULT_THEME, loadTheme, saveTheme, type Theme } from './lib/theme'
 import { DEFAULT_FILTERS, type JobPosting, type SearchFilters } from './lib/types'
+import { LazyImage } from './components/LazyImage'
 import './App.css'
 
 export default function App() {
+  const [theme, setTheme] = useState<Theme>(DEFAULT_THEME)
   const [apiKey, setApiKey] = useState('')
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS)
+  const [saved, setSaved] = useState<SavedSearch[]>([])
   const [jobs, setJobs] = useState<JobPosting[]>([])
   const [query, setQuery] = useState('')
+  const [queries, setQueries] = useState<string[] | undefined>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const [warning, setWarning] = useState<string | undefined>()
   const [creditsUsed, setCreditsUsed] = useState<number | undefined>()
   const [rawCount, setRawCount] = useState<number | undefined>()
+  const [fanOutCount, setFanOutCount] = useState<number | undefined>()
   const [enrichingId, setEnrichingId] = useState<string | null>(null)
+  const [viewFilters, setViewFilters] = useState<ResultViewFilters>(DEFAULT_VIEW_FILTERS)
 
   useEffect(() => {
+    const t = loadTheme()
+    setTheme(t)
+    applyTheme(t)
     setApiKey(loadApiKey())
     setFilters(loadJson(FILTERS_KEY, DEFAULT_FILTERS))
+    setSaved(loadSavedSearches())
   }, [])
+
+  function handleTheme(next: Theme) {
+    setTheme(next)
+    saveTheme(next)
+    applyTheme(next)
+  }
 
   function handleSaveKey(key: string) {
     saveApiKey(key)
@@ -34,12 +66,12 @@ export default function App() {
     saveJson(FILTERS_KEY, next)
   }
 
-  async function handleSearch() {
+  async function runSearch(active: SearchFilters) {
     if (!apiKey.trim()) {
       setError('Add your Firecrawl API key first (BYOK).')
       return
     }
-    if (!filters.jobTitles.trim() && !filters.keywords.trim()) {
+    if (!active.jobTitles.trim() && !active.keywords.trim()) {
       setError('Enter at least one job title or keyword.')
       return
     }
@@ -48,12 +80,21 @@ export default function App() {
     setError(undefined)
     setWarning(undefined)
     setJobs([])
+    setQueries(undefined)
+    setViewFilters(DEFAULT_VIEW_FILTERS)
+    setFanOutCount(
+      active.fanOutBoards && active.boards.length > 1
+        ? Math.min(active.boards.length, 8)
+        : 1,
+    )
 
     try {
-      const res = await searchJobs(apiKey, filters)
+      const res = await searchJobs(apiKey, active)
       setQuery(res.query)
+      setQueries(res.queries)
       setCreditsUsed(res.creditsUsed)
       setRawCount(res.rawCount)
+      setFanOutCount(res.fanOutCount)
       if (!res.success) {
         setError(res.error || 'Search failed')
         return
@@ -71,6 +112,33 @@ export default function App() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleSearch() {
+    void runSearch(filters)
+  }
+
+  function handleSaveSearch(name: string) {
+    const entry = createSavedSearch(name, filters)
+    const next = upsertSavedSearch(saved, entry)
+    setSaved(next)
+    persistSavedSearches(next)
+  }
+
+  function handleLoadSearch(entry: SavedSearch) {
+    handleFilters({ ...DEFAULT_FILTERS, ...entry.filters })
+  }
+
+  function handleDeleteSearch(id: string) {
+    const next = deleteSavedSearch(saved, id)
+    setSaved(next)
+    persistSavedSearches(next)
+  }
+
+  function handleRunSaved(entry: SavedSearch) {
+    const next = { ...DEFAULT_FILTERS, ...entry.filters }
+    handleFilters(next)
+    void runSearch(next)
   }
 
   async function handleEnrich(job: JobPosting) {
@@ -109,33 +177,61 @@ export default function App() {
     }
   }
 
+  const exportable = useMemo(
+    () => filterAndSortJobs(jobs, viewFilters, filters),
+    [jobs, viewFilters, filters],
+  )
+
   function handleExport() {
-    const csv = exportJobsCsv(jobs)
+    const csv = exportJobsCsv(exportable)
     const stamp = new Date().toISOString().slice(0, 10)
     downloadText(`job-scout-${stamp}.csv`, csv)
   }
 
   return (
     <div className="app">
-      <header className="hero">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            ⌬
-          </span>
-          <div>
-            <p className="eyebrow">Cloudflare Pages · Firecrawl BYOK</p>
-            <h1>Job Scout</h1>
-          </div>
+      <div className="topbar">
+        <div className="topbar-brand">
+          <span className="topbar-mark">job scout</span>
+          <span className="topbar-tag">strategy + craft</span>
         </div>
-        <p className="lede">
-          Search public job postings across the web with your own Firecrawl API key. No
-          LinkedIn automation, no shared secrets — you bring the key, we proxy the search.
-        </p>
+        <div className="topbar-actions">
+          <ThemeToggle theme={theme} onChange={handleTheme} />
+        </div>
+      </div>
+
+      <header className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">Cloudflare Pages · Firecrawl BYOK</p>
+          <h1>
+            Find roles
+            <br />
+            with <span className="hero-title-accent">your</span> key
+          </h1>
+          <p className="lede">
+            Search public job postings across the web with your own Firecrawl API key. No
+            LinkedIn automation, no shared secrets — you bring the key, we proxy the search.
+          </p>
+        </div>
+        <LazyImage
+          alt=""
+          className="hero-media"
+          aspectRatio="4 / 3"
+          tone="butter"
+        />
       </header>
 
       <main className="layout">
         <div className="col">
           <ApiKeyPanel apiKey={apiKey} onSave={handleSaveKey} />
+          <SavedSearches
+            filters={filters}
+            saved={saved}
+            onSave={handleSaveSearch}
+            onLoad={handleLoadSearch}
+            onDelete={handleDeleteSearch}
+            onSearch={handleRunSaved}
+          />
           <SearchForm
             filters={filters}
             loading={loading}
@@ -147,11 +243,16 @@ export default function App() {
           <ResultsList
             jobs={jobs}
             query={query}
+            queries={queries}
             loading={loading}
             error={error}
             warning={warning}
             creditsUsed={creditsUsed}
             rawCount={rawCount}
+            fanOutCount={fanOutCount}
+            searchFilters={filters}
+            viewFilters={viewFilters}
+            onViewFiltersChange={setViewFilters}
             onEnrich={handleEnrich}
             enrichingId={enrichingId}
             onExport={handleExport}

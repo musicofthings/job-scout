@@ -6,6 +6,11 @@ Search **public job postings** on the web with [Firecrawl](https://www.firecrawl
 
 - Filters: region/city, country geo, job titles, keywords, role types, work mode, experience, time range
 - Source chips for Greenhouse, Lever, Ashby, Workable, Wellfound, RemoteOK, Indeed, LinkedIn public pages, and more
+- **Saved searches** (local) with load / run / delete
+- **Board fan-out**: optional one Firecrawl query per selected board, then merge + rank
+- **Relevance ranking** and post-search filters (text, source, salary, remote, sort)
+- Light/dark theme toggle (**default light**), Sensa-inspired editorial aesthetic (Averia Serif + Inter, warm paper / deep ink)
+- Lazy-loaded media slots (hero + job cards) ready for future images
 - Live query preview
 - Result cards with open link, optional deep scrape enrich, CSV export
 - Key stored only in `localStorage`; sent as `X-Firecrawl-Key` per request

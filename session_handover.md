@@ -10,37 +10,39 @@ _Compact count this project: 0_
 **What we're building/fixing:**
 **Job Scout** — a BYOK (bring-your-own-key) job search web app. Users enter region, keywords, job titles, role types, etc. The app searches public job boards via **Firecrawl** (`/v2/search` and `/v2/scrape`). Deployed on **Cloudflare Pages** with Functions as a key-forwarding proxy only (no server-side Firecrawl secret).
 
-**Phase:** v0.1 live on Cloudflare Pages (working)
-**Next action:** Optional product polish (custom domain, saved searches, more boards) — no blockers.
+**Phase:** v0.2 features in progress (theme + saved searches + ranking)
+**Next action:** Verify tests/build, then commit & deploy if user wants.
 
 ---
 
 ## Completed This Session
 - [x] Confirmed no LinkedIn plugin/skill in Grok/Claude marketplaces
 - [x] Chose Firecrawl BYOK + Cloudflare Pages (no third-party LinkedIn MCP)
-- [x] Scaffolded React + Vite + TypeScript app at `C:\Users\Dr Shibichakravarthy\job-scout`
+- [x] Scaffolded React + Vite + TypeScript app
 - [x] Implemented Pages Functions: `POST /api/search`, `POST /api/scrape` (BYOK via `X-Firecrawl-Key`)
 - [x] Built UI: API key panel, search form, result cards, enrich, CSV export
 - [x] Local Vite middleware mirrors Functions for `npm run dev`
-- [x] Unit tests (Vitest): queryBuilder + normalize (13 tests)
+- [x] Unit tests (Vitest): queryBuilder + normalize
 - [x] GitHub repo: https://github.com/musicofthings/job-scout (public, `main`)
 - [x] Cloudflare Pages deploy fixed and **confirmed working by user**
 - [x] BYOK guidance: do **not** store Firecrawl key in Cloudflare env
+- [x] Theme switcher (default **light**); user prefers light themes for all artifacts (saved to Grok + Claude memory)
+- [x] Saved searches (localStorage)
+- [x] Multi-query board fan-out + merge/rank
+- [x] Stronger ranking + post-search result filters
 
 ---
 
 ## In Progress (Exact Resume Point)
 **Branch:** `main`
-**Last commit:** `fd73aec` — Stabilize Pages install: slim deps and fresh lockfile
-**Next immediate action:** None required for deploy. Optional: custom domain, product features, or commit this handover file.
+**Last commit:** (see git log)
+**Next immediate action:** Run tests/build; commit feature work; optional deploy.
 
 ---
 
 ## Remaining Work (optional)
 1. Custom domain on Cloudflare Pages
-2. Saved searches / multi-query board fan-out
-3. Stronger result ranking or filters
-4. Optional shared-server Firecrawl key mode (would change BYOK model — not requested)
+2. Optional shared-server Firecrawl key mode (would change BYOK model — not requested)
 
 ---
 
