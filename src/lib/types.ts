@@ -18,6 +18,8 @@ export interface SearchFilters {
   boards: string[]
 }
 
+export type ActiveStatus = 'active' | 'inactive' | 'unknown'
+
 export interface JobPosting {
   id: string
   title: string
@@ -34,6 +36,10 @@ export interface JobPosting {
   imageUrl?: string
   /** Client-side relevance score after ranking. */
   score?: number
+  /** Whether the posting still looks open after an active check. */
+  activeStatus?: ActiveStatus
+  activeReason?: string
+  activeCheckedAt?: string
 }
 
 export interface SearchResponse {
@@ -52,6 +58,26 @@ export interface SearchResponse {
 export interface ScrapeJobResponse {
   success: boolean
   job?: Partial<JobPosting> & { markdown?: string }
+  error?: string
+}
+
+export interface ActiveCheckResponse {
+  success: boolean
+  url?: string
+  status?: ActiveStatus
+  reason?: string
+  confidence?: 'high' | 'medium' | 'low'
+  error?: string
+}
+
+export interface DigestSubscribeResponse {
+  success: boolean
+  id?: string
+  email?: string
+  hourUtc?: number
+  label?: string
+  unsubToken?: string
+  message?: string
   error?: string
 }
 

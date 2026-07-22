@@ -4,7 +4,15 @@ import { ResultsList } from './components/ResultsList'
 import { SavedSearches } from './components/SavedSearches'
 import { SearchForm } from './components/SearchForm'
 import { ThemeToggle } from './components/ThemeToggle'
-import { downloadText, enrichJob, exportJobsCsv, searchJobs } from './lib/api'
+import {
+  checkJobActive,
+  checkJobsActive,
+  downloadText,
+  enrichJob,
+  exportJobsCsv,
+  searchJobs,
+} from './lib/api'
+import { DigestPanel } from './components/DigestPanel'
 import {
   DEFAULT_VIEW_FILTERS,
   filterAndSortJobs,
@@ -40,6 +48,8 @@ export default function App() {
   const [fanOutCount, setFanOutCount] = useState<number | undefined>()
   const [enrichingId, setEnrichingId] = useState<string | null>(null)
   const [viewFilters, setViewFilters] = useState<ResultViewFilters>(DEFAULT_VIEW_FILTERS)
+  const [checkingActive, setCheckingActive] = useState(false)
+  const [checkingActiveId, setCheckingActiveId] = useState<string | null>(null)
 
   useEffect(() => {
     const t = loadTheme()
@@ -141,6 +151,71 @@ export default function App() {
     void runSearch(next)
   }
 
+  async function handleCheckOneActive(job: JobPosting) {
+    if (!apiKey.trim()) {
+      setError('API key required to check if a job is still active.')
+      return
+    }
+    setCheckingActiveId(job.id)
+    setError(undefined)
+    try {
+      const res = await checkJobActive(apiKey, job.url)
+      if (!res.success || !res.status) {
+        setError(res.error || 'Active check failed')
+        return
+      }
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === job.id
+            ? {
+                ...j,
+                activeStatus: res.status,
+                activeReason: res.reason,
+                activeCheckedAt: new Date().toISOString(),
+              }
+            : j,
+        ),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Active check network error')
+    } finally {
+      setCheckingActiveId(null)
+    }
+  }
+
+  async function handleCheckAllActive() {
+    if (!apiKey.trim()) {
+      setError('API key required to check active status.')
+      return
+    }
+    if (!jobs.length) return
+    setCheckingActive(true)
+    setError(undefined)
+    try {
+      const map = await checkJobsActive(apiKey, jobs, 3)
+      setJobs((prev) =>
+        prev.map((j) => {
+          const res = map.get(j.id)
+          if (!res?.success || !res.status) return j
+          return {
+            ...j,
+            activeStatus: res.status,
+            activeReason: res.reason,
+            activeCheckedAt: new Date().toISOString(),
+          }
+        }),
+      )
+      const failed = [...map.values()].filter((r) => !r.success).length
+      if (failed) {
+        setWarning(`${failed} active check${failed === 1 ? '' : 's'} failed (see credits / key).`)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bulk active check failed')
+    } finally {
+      setCheckingActive(false)
+    }
+  }
+
   async function handleEnrich(job: JobPosting) {
     if (!apiKey.trim()) {
       setError('API key required to enrich.')
@@ -232,6 +307,7 @@ export default function App() {
             onDelete={handleDeleteSearch}
             onSearch={handleRunSaved}
           />
+          <DigestPanel apiKey={apiKey} filters={filters} />
           <SearchForm
             filters={filters}
             loading={loading}
@@ -256,6 +332,10 @@ export default function App() {
             onEnrich={handleEnrich}
             enrichingId={enrichingId}
             onExport={handleExport}
+            onCheckActive={() => void handleCheckAllActive()}
+            onCheckOneActive={(job) => void handleCheckOneActive(job)}
+            checkingActive={checkingActive}
+            checkingActiveId={checkingActiveId}
           />
         </div>
       </main>

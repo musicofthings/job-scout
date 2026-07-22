@@ -132,6 +132,19 @@ describe('filterAndSortJobs', () => {
     expect(out[0].id).toBe('a')
   })
 
+  it('filters by active status', () => {
+    const withStatus = [
+      { ...jobs[0]!, activeStatus: 'active' as const },
+      { ...jobs[1]!, activeStatus: 'inactive' as const },
+    ]
+    const out = filterAndSortJobs(
+      withStatus,
+      { ...DEFAULT_VIEW_FILTERS, activeFilter: 'active' },
+      filters(),
+    )
+    expect(out.map((j) => j.id)).toEqual(['a'])
+  })
+
   it('filters remote only', () => {
     const out = filterAndSortJobs(
       jobs,

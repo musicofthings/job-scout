@@ -1,12 +1,15 @@
 import type { JobPosting, SearchFilters } from './types'
 
 export type SortMode = 'relevance' | 'company' | 'title' | 'source'
+export type ActiveFilter = 'any' | 'active' | 'inactive' | 'unknown'
 
 export interface ResultViewFilters {
   text: string
   sources: string[]
   requireSalary: boolean
   remoteOnly: boolean
+  /** Filter by verified active status (run "Check active" first). */
+  activeFilter: ActiveFilter
   sort: SortMode
 }
 
@@ -15,6 +18,7 @@ export const DEFAULT_VIEW_FILTERS: ResultViewFilters = {
   sources: [],
   requireSalary: false,
   remoteOnly: false,
+  activeFilter: 'any',
   sort: 'relevance',
 }
 
@@ -120,6 +124,10 @@ export function filterAndSortJobs(
     if (view.remoteOnly) {
       const text = haystack(job)
       if (!job.tags.includes('remote') && !/remote|wfh|work from home/i.test(text)) return false
+    }
+    if (view.activeFilter !== 'any') {
+      const status = job.activeStatus || 'unknown'
+      if (status !== view.activeFilter) return false
     }
     if (view.sources.length && !view.sources.includes(job.source)) return false
     if (q) {

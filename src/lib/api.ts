@@ -1,4 +1,11 @@
-import type { JobPosting, ScrapeJobResponse, SearchFilters, SearchResponse } from './types'
+import type {
+  ActiveCheckResponse,
+  DigestSubscribeResponse,
+  JobPosting,
+  ScrapeJobResponse,
+  SearchFilters,
+  SearchResponse,
+} from './types'
 import { JOB_BOARDS } from './types'
 import { buildSearchQuery, getIncludeDomains, getLocationParam, getTimeTbs } from './queryBuilder'
 import { rankJobs } from './ranking'
@@ -181,8 +188,97 @@ export async function enrichJob(
   return data
 }
 
+export async function checkJobActive(
+  apiKey: string,
+  url: string,
+): Promise<ActiveCheckResponse> {
+  const res = await fetch('/api/active', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Firecrawl-Key': apiKey,
+    },
+    body: JSON.stringify({ url }),
+  })
+  const data = (await res.json()) as ActiveCheckResponse
+  if (!res.ok) {
+    return { success: false, error: data.error || `Active check failed (${res.status})` }
+  }
+  return data
+}
+
+/** Run active checks with limited concurrency (uses Firecrawl credits). */
+export async function checkJobsActive(
+  apiKey: string,
+  jobs: JobPosting[],
+  concurrency = 3,
+  onProgress?: (done: number, total: number) => void,
+): Promise<Map<string, ActiveCheckResponse>> {
+  const out = new Map<string, ActiveCheckResponse>()
+  let done = 0
+  const total = jobs.length
+  let cursor = 0
+
+  async function worker() {
+    while (cursor < jobs.length) {
+      const idx = cursor++
+      const job = jobs[idx]!
+      const res = await checkJobActive(apiKey, job.url)
+      out.set(job.id, res)
+      done += 1
+      onProgress?.(done, total)
+    }
+  }
+
+  const n = Math.min(concurrency, Math.max(1, jobs.length))
+  await Promise.all(Array.from({ length: n }, () => worker()))
+  return out
+}
+
+export async function subscribeDigest(input: {
+  email: string
+  label?: string
+  filters: SearchFilters
+  firecrawlKey: string
+  hourLocal: number
+  timezoneOffsetMinutes: number
+  timezone?: string
+}): Promise<DigestSubscribeResponse> {
+  const res = await fetch('/api/digest/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const data = (await res.json()) as DigestSubscribeResponse
+  if (!res.ok) {
+    return { success: false, error: data.error || `Subscribe failed (${res.status})` }
+  }
+  return data
+}
+
+export async function unsubscribeDigest(
+  email: string,
+  token: string,
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  const res = await fetch('/api/digest/unsubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, token }),
+  })
+  return (await res.json()) as { success: boolean; error?: string; message?: string }
+}
+
 export function exportJobsCsv(jobs: JobPosting[]): string {
-  const headers = ['title', 'company', 'location', 'url', 'source', 'score', 'description']
+  const headers = [
+    'title',
+    'company',
+    'location',
+    'url',
+    'source',
+    'score',
+    'activeStatus',
+    'description',
+  ]
   const rows = jobs.map((j) =>
     headers
       .map((h) => {

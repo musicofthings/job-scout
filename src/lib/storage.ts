@@ -1,5 +1,14 @@
 const KEY = 'job-scout:firecrawl-api-key'
 const FILTERS_KEY = 'job-scout:last-filters'
+const DIGEST_META_KEY = 'job-scout:digest-meta'
+
+export interface DigestMeta {
+  email: string
+  unsubToken: string
+  label?: string
+  hourLocal?: number
+  id?: string
+}
 
 export function loadApiKey(): string {
   try {
@@ -36,4 +45,23 @@ export function saveJson(key: string, value: unknown): void {
   }
 }
 
-export { FILTERS_KEY }
+export function loadDigestMeta(): DigestMeta | null {
+  try {
+    const raw = localStorage.getItem(DIGEST_META_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as DigestMeta
+  } catch {
+    return null
+  }
+}
+
+export function saveDigestMeta(meta: DigestMeta | null): void {
+  try {
+    if (!meta) localStorage.removeItem(DIGEST_META_KEY)
+    else localStorage.setItem(DIGEST_META_KEY, JSON.stringify(meta))
+  } catch {
+    /* ignore */
+  }
+}
+
+export { FILTERS_KEY, DIGEST_META_KEY }

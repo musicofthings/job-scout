@@ -66,4 +66,18 @@ describe('normalizeResults', () => {
   it('skips entries without urls', () => {
     expect(normalizeResults([{ title: 'No URL' }])).toHaveLength(0)
   })
+
+  it('picks og:image from metadata when present', () => {
+    const jobs = normalizeResults([
+      {
+        title: 'Designer at Studio',
+        url: 'https://jobs.lever.co/studio/1',
+        description: 'Make things',
+        metadata: {
+          ogImage: 'https://cdn.example.com/studio-og.png',
+        },
+      },
+    ])
+    expect(jobs[0].imageUrl).toBe('https://cdn.example.com/studio-og.png')
+  })
 })

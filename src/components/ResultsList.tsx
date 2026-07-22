@@ -20,6 +20,10 @@ interface Props {
   onEnrich: (job: JobPosting) => Promise<void>
   enrichingId?: string | null
   onExport: () => void
+  onCheckActive?: () => void
+  onCheckOneActive?: (job: JobPosting) => void
+  checkingActive?: boolean
+  checkingActiveId?: string | null
 }
 
 export function ResultsList({
@@ -38,9 +42,14 @@ export function ResultsList({
   onEnrich,
   enrichingId,
   onExport,
+  onCheckActive,
+  onCheckOneActive,
+  checkingActive,
+  checkingActiveId,
 }: Props) {
   const visible = filterAndSortJobs(jobs, viewFilters, searchFilters)
   const sources = uniqueSources(jobs)
+  const activeCheckedCount = jobs.filter((j) => j.activeStatus).length
 
   return (
     <section className="panel results-panel">
@@ -60,6 +69,9 @@ export function ResultsList({
               ? ` · ${rawCount} raw hits`
               : ''}
             {fanOutCount && fanOutCount > 1 && !loading ? ` · ${fanOutCount} board queries` : ''}
+            {activeCheckedCount > 0 && !loading
+              ? ` · ${activeCheckedCount} active-checked`
+              : ''}
           </p>
         </div>
         {jobs.length > 0 && (
@@ -98,7 +110,10 @@ export function ResultsList({
           sources={sources}
           total={jobs.length}
           shown={visible.length}
+          checkingActive={checkingActive}
+          activeCheckedCount={activeCheckedCount}
           onChange={onViewFiltersChange}
+          onCheckActive={onCheckActive}
         />
       )}
 
@@ -115,7 +130,8 @@ export function ResultsList({
           <strong>Ready when you are</strong>
           <p>
             Job Scout searches public web job boards with your Firecrawl key. Results are
-            ranked by relevance and can be filtered after search.
+            ranked by relevance and can be filtered after search — including still-active
+            checks.
           </p>
         </div>
       )}
@@ -123,7 +139,7 @@ export function ResultsList({
       {!loading && jobs.length > 0 && visible.length === 0 && (
         <div className="empty">
           <strong>No matches for these filters</strong>
-          <p>Clear result filters or broaden the text / source chips.</p>
+          <p>Clear result filters or broaden the text / source / active chips.</p>
         </div>
       )}
 
@@ -134,6 +150,8 @@ export function ResultsList({
             job={job}
             enriching={enrichingId === job.id}
             onEnrich={onEnrich}
+            checkingActive={checkingActiveId === job.id || (checkingActive && !job.activeStatus)}
+            onCheckActive={onCheckOneActive}
           />
         ))}
       </div>

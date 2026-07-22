@@ -10,6 +10,8 @@ export interface JobPosting {
   salaryHint?: string
   tags: string[]
   markdown?: string
+  /** Featured media: og:image when present; client may replace with brand logos. */
+  imageUrl?: string
 }
 
 interface FirecrawlWebResult {
@@ -17,11 +19,17 @@ interface FirecrawlWebResult {
   description?: string
   url?: string
   markdown?: string
+  image?: string
   metadata?: {
     title?: string
     description?: string
     sourceURL?: string
     url?: string
+    ogImage?: string
+    'og:image'?: string
+    image?: string
+    imageUrl?: string
+    favicon?: string
   }
   json?: Record<string, unknown>
 }
@@ -154,6 +162,8 @@ export function normalizeResults(web: FirecrawlWebResult[]): JobPosting[] {
     if (/contract|freelance/i.test(`${title} ${description}`)) tags.push('contract')
     if (/full[- ]?time/i.test(`${title} ${description}`)) tags.push('full-time')
 
+    const imageUrl = pickImage(item)
+
     jobs.push({
       id: hashId(url),
       title: cleanTitle(title, company),
@@ -165,8 +175,27 @@ export function normalizeResults(web: FirecrawlWebResult[]): JobPosting[] {
       salaryHint,
       tags,
       markdown: item.markdown,
+      imageUrl,
     })
   }
 
   return jobs
+}
+
+function pickImage(item: FirecrawlWebResult): string | undefined {
+  const meta = item.metadata ?? {}
+  const json = item.json ?? {}
+  const candidates = [
+    item.image,
+    meta.ogImage,
+    meta['og:image'],
+    meta.image,
+    meta.imageUrl,
+    typeof json.image === 'string' ? json.image : undefined,
+    typeof json.ogImage === 'string' ? json.ogImage : undefined,
+  ]
+  for (const c of candidates) {
+    if (typeof c === 'string' && /^https?:\/\//i.test(c.trim())) return c.trim()
+  }
+  return undefined
 }

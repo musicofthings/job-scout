@@ -1,14 +1,26 @@
-import type { ResultViewFilters, SortMode } from '../lib/ranking'
+import type { ActiveFilter, ResultViewFilters, SortMode } from '../lib/ranking'
 
 interface Props {
   view: ResultViewFilters
   sources: string[]
   total: number
   shown: number
+  checkingActive?: boolean
+  activeCheckedCount?: number
   onChange: (next: ResultViewFilters) => void
+  onCheckActive?: () => void
 }
 
-export function ResultFilters({ view, sources, total, shown, onChange }: Props) {
+export function ResultFilters({
+  view,
+  sources,
+  total,
+  shown,
+  checkingActive,
+  activeCheckedCount = 0,
+  onChange,
+  onCheckActive,
+}: Props) {
   function set<K extends keyof ResultViewFilters>(key: K, value: ResultViewFilters[K]) {
     onChange({ ...view, [key]: value })
   }
@@ -46,6 +58,18 @@ export function ResultFilters({ view, sources, total, shown, onChange }: Props) 
             <option value="source">Source</option>
           </select>
         </label>
+        <label className="field">
+          <span>Still active?</span>
+          <select
+            value={view.activeFilter}
+            onChange={(e) => set('activeFilter', e.target.value as ActiveFilter)}
+          >
+            <option value="any">Any status</option>
+            <option value="active">Active only</option>
+            <option value="inactive">Inactive only</option>
+            <option value="unknown">Unchecked / unknown</option>
+          </select>
+        </label>
       </div>
 
       <div className="result-filters-row chips-row">
@@ -63,6 +87,21 @@ export function ResultFilters({ view, sources, total, shown, onChange }: Props) 
         >
           Remote only
         </button>
+        {onCheckActive && (
+          <button
+            type="button"
+            className="chip chip-action"
+            disabled={checkingActive}
+            onClick={onCheckActive}
+            title="Scrapes each posting (uses Firecrawl credits)"
+          >
+            {checkingActive
+              ? 'Checking active…'
+              : activeCheckedCount
+                ? `Re-check active (${activeCheckedCount}/${total})`
+                : 'Check if still active'}
+          </button>
+        )}
         {view.sources.length > 0 && (
           <button type="button" className="chip" onClick={() => set('sources', [])}>
             Clear sources
@@ -72,6 +111,13 @@ export function ResultFilters({ view, sources, total, shown, onChange }: Props) 
           Showing {shown} of {total}
         </span>
       </div>
+
+      {view.activeFilter === 'active' && activeCheckedCount === 0 && (
+        <p className="hint">
+          Run <strong>Check if still active</strong> first — unverified jobs are treated as
+          unknown and hidden by this filter.
+        </p>
+      )}
 
       {sources.length > 1 && (
         <div className="chips source-chips">
