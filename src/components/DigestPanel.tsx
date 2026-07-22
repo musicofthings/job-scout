@@ -10,9 +10,11 @@ import {
 interface Props {
   apiKey: string
   filters: SearchFilters
+  /** Bump to re-read local digest meta after clear-all. */
+  storageEpoch?: number
 }
 
-export function DigestPanel({ apiKey, filters }: Props) {
+export function DigestPanel({ apiKey, filters, storageEpoch = 0 }: Props) {
   const [email, setEmail] = useState('')
   const [label, setLabel] = useState('Daily job digest')
   const [hourLocal, setHourLocal] = useState(8)
@@ -30,8 +32,16 @@ export function DigestPanel({ apiKey, filters }: Props) {
       setToken(m.unsubToken)
       if (m.label) setLabel(m.label)
       if (typeof m.hourLocal === 'number') setHourLocal(m.hourLocal)
+    } else {
+      setMeta(null)
+      setEmail('')
+      setToken('')
+      setLabel('Daily job digest')
+      setHourLocal(8)
+      setMessage(undefined)
+      setError(undefined)
     }
-  }, [])
+  }, [storageEpoch])
 
   async function handleSubscribe() {
     setBusy(true)
@@ -62,7 +72,7 @@ export function DigestPanel({ apiKey, filters }: Props) {
       })
 
       if (!res.success || !res.unsubToken || !res.email) {
-        setError(res.error || 'Could not schedule digest (is KV + Resend configured?)')
+        setError(res.error || 'Could not schedule digest (is KV + Gmail configured?)')
         return
       }
 
@@ -114,8 +124,10 @@ export function DigestPanel({ apiKey, filters }: Props) {
         <div>
           <h2>Daily email digest</h2>
           <p className="muted">
-            Schedule the current search once a day. Your Firecrawl key is stored{' '}
-            <strong>encrypted</strong> for the cron run only — not used for other traffic.
+            Works for everyone on the <strong>live</strong> site after Gmail + KV + cron are
+            configured on Cloudflare. Local <code>npm run dev</code> only stores digests in
+            this machine&apos;s memory (no email to others). Your Firecrawl key is stored{' '}
+            <strong>encrypted</strong> for cron runs only.
           </p>
         </div>
       </div>
@@ -183,10 +195,11 @@ export function DigestPanel({ apiKey, filters }: Props) {
       {message && <p className="status ok">{message}</p>}
       {error && <p className="status warn">{error}</p>}
       <p className="hint">
-        Production needs Cloudflare KV (<code>DIGESTS</code>),{' '}
-        <code>RESEND_API_KEY</code>, <code>DIGEST_FROM_EMAIL</code>,{' '}
-        <code>DIGEST_ENCRYPTION_KEY</code>, <code>CRON_SECRET</code>, and an hourly cron to{' '}
-        <code>POST /api/digest/run</code>. See README.
+        Production needs Cloudflare KV (<code>DIGESTS</code>), email via Gmail Apps Script
+        or Resend, <code>DIGEST_ENCRYPTION_KEY</code>, <code>CRON_SECRET</code>,{' '}
+        <code>PUBLIC_APP_URL</code>, and hourly cron to <code>POST /api/digest/run</code>. If
+        Google shows <code>policy_enforced</code> / Advanced Protection, use a secondary Gmail
+        without APP or use Resend — see README.
       </p>
     </section>
   )

@@ -679,6 +679,28 @@ a.primary {
   font-size: 0.78em;
 }
 
+.clear-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.clear-legend {
+  margin: 0.85rem 0 0;
+  padding-left: 1.1rem;
+  line-height: 1.55;
+}
+
+.clear-legend li {
+  margin-bottom: 0.25rem;
+}
+
+.danger-btn {
+  background: var(--danger) !important;
+  color: #fff !important;
+}
+
 .source-badge {
   flex-shrink: 0;
   font-size: 0.68rem;

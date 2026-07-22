@@ -1,6 +1,8 @@
 const KEY = 'job-scout:firecrawl-api-key'
 const FILTERS_KEY = 'job-scout:last-filters'
 const DIGEST_META_KEY = 'job-scout:digest-meta'
+/** Prefix for every Job Scout localStorage key (used by clear-all). */
+export const STORAGE_PREFIX = 'job-scout:'
 
 export interface DigestMeta {
   email: string
@@ -64,4 +66,27 @@ export function saveDigestMeta(meta: DigestMeta | null): void {
   }
 }
 
-export { FILTERS_KEY, DIGEST_META_KEY }
+/**
+ * Remove Job Scout data from this browser.
+ * @param keepTheme when true, leaves light/dark preference alone
+ */
+export function clearLocalStorage(options: { keepTheme?: boolean } = {}): string[] {
+  const removed: string[] = []
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k?.startsWith(STORAGE_PREFIX)) keys.push(k)
+    }
+    for (const k of keys) {
+      if (options.keepTheme && k === 'job-scout:theme') continue
+      localStorage.removeItem(k)
+      removed.push(k)
+    }
+  } catch {
+    /* private mode */
+  }
+  return removed
+}
+
+export { FILTERS_KEY, DIGEST_META_KEY, KEY as API_KEY_STORAGE_KEY }

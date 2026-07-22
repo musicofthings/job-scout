@@ -2,23 +2,12 @@ name = "job-scout"
 compatibility_date = "2026-03-01"
 pages_build_output_dir = "dist"
 
-# Search/scrape stay BYOK via X-Firecrawl-Key (no shared Firecrawl secret required).
+# Interactive search is fully BYOK — no server-side Firecrawl secret.
 #
-# Optional daily digests — bind KV + set secrets in Cloudflare Pages:
-#   npx wrangler kv namespace create DIGESTS
-#   npx wrangler kv namespace create DIGESTS --preview
-# Then uncomment and paste the ids:
+# Daily email digests are deferred (UI removed). KV binding below is unused
+# until digests return (e.g. webhook-based). Safe to leave or remove.
 #
 # [[kv_namespaces]]
 # binding = "DIGESTS"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-# preview_id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
-#
-# Secrets / vars: RESEND_API_KEY, DIGEST_FROM_EMAIL, DIGEST_ENCRYPTION_KEY,
-# CRON_SECRET, PUBLIC_APP_URL
-#
-# Schedule hourly (external cron or Worker):
-#   curl -X POST "$PUBLIC_APP_URL/api/digest/run" \
-#     -H "Authorization: Bearer $CRON_SECRET" \
-#     -H "Content-Type: application/json" \
-#     -d '{}'
+# id = "bc3242b50d0148d6b376144580f18926"
+# preview_id = "7c3c22c5d5fc481daa3cb0d0710d03bd"

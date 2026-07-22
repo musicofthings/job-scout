@@ -19,8 +19,18 @@ export interface DigestSubscription {
 
 export interface DigestEnv {
   DIGESTS?: KVNamespace
-  RESEND_API_KEY?: string
+  /** Preferred: Google Apps Script web app URL that sends via your Gmail. */
+  GMAIL_APPS_SCRIPT_URL?: string
+  /** Optional shared secret checked by the Apps Script (defaults to CRON_SECRET). */
+  GMAIL_APPS_SCRIPT_SECRET?: string
+  /** Gmail API OAuth (alternative to Apps Script). */
+  GMAIL_CLIENT_ID?: string
+  GMAIL_CLIENT_SECRET?: string
+  GMAIL_REFRESH_TOKEN?: string
+  /** From address, e.g. you@gmail.com (required for Gmail API / optional display for Apps Script). */
   DIGEST_FROM_EMAIL?: string
+  /** Optional fallback if Gmail is not configured. */
+  RESEND_API_KEY?: string
   DIGEST_ENCRYPTION_KEY?: string
   CRON_SECRET?: string
   PUBLIC_APP_URL?: string
@@ -222,32 +232,159 @@ export async function sendDigestEmail(
   env: DigestEnv,
   input: { to: string; subject: string; html: string },
 ): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = env.RESEND_API_KEY
-  const from = env.DIGEST_FROM_EMAIL
-  if (!apiKey || !from) {
+  // 1) Gmail via Google Apps Script (recommended — uses your Gmail mailbox)
+  if (env.GMAIL_APPS_SCRIPT_URL?.trim()) {
+    return sendViaGmailAppsScript(env, input)
+  }
+
+  // 2) Gmail API with OAuth refresh token
+  if (env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN) {
+    return sendViaGmailApi(env, input)
+  }
+
+  // 3) Optional Resend fallback
+  if (env.RESEND_API_KEY && env.DIGEST_FROM_EMAIL) {
+    return sendViaResend(env, input)
+  }
+
+  return {
+    ok: false,
+    error:
+      'No email provider configured. Set GMAIL_APPS_SCRIPT_URL (recommended) or Gmail OAuth vars (GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN + DIGEST_FROM_EMAIL).',
+  }
+}
+
+async function sendViaGmailAppsScript(
+  env: DigestEnv,
+  input: { to: string; subject: string; html: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const url = env.GMAIL_APPS_SCRIPT_URL!.trim()
+  const secret = env.GMAIL_APPS_SCRIPT_SECRET || env.CRON_SECRET || ''
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret,
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        from: env.DIGEST_FROM_EMAIL,
+      }),
+      redirect: 'follow',
+    })
+    const text = await res.text()
+    if (!res.ok) {
+      return { ok: false, error: `Gmail Apps Script error (${res.status}): ${text.slice(0, 200)}` }
+    }
+    try {
+      const data = JSON.parse(text) as { ok?: boolean; error?: string }
+      if (data.ok === false) {
+        return { ok: false, error: data.error || 'Gmail Apps Script rejected the send' }
+      }
+    } catch {
+      /* Apps Script sometimes returns empty/HTML on success after redirect */
+    }
+    return { ok: true }
+  } catch (err) {
     return {
       ok: false,
-      error: 'Set RESEND_API_KEY and DIGEST_FROM_EMAIL for digest delivery.',
+      error: err instanceof Error ? err.message : 'Gmail Apps Script request failed',
+    }
+  }
+}
+
+async function sendViaGmailApi(
+  env: DigestEnv,
+  input: { to: string; subject: string; html: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const from = (env.DIGEST_FROM_EMAIL || '').trim()
+  if (!from) {
+    return { ok: false, error: 'Set DIGEST_FROM_EMAIL to your Gmail address for Gmail API sends.' }
+  }
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: env.GMAIL_CLIENT_ID!,
+      client_secret: env.GMAIL_CLIENT_SECRET!,
+      refresh_token: env.GMAIL_REFRESH_TOKEN!,
+      grant_type: 'refresh_token',
+    }),
+  })
+  const tokenData = (await tokenRes.json()) as { access_token?: string; error?: string }
+  if (!tokenRes.ok || !tokenData.access_token) {
+    return {
+      ok: false,
+      error: `Gmail OAuth token error: ${tokenData.error || tokenRes.status}`,
     }
   }
 
+  const raw = toBase64Url(
+    [
+      `From: ${from}`,
+      `To: ${input.to}`,
+      `Subject: ${encodeRfc2047(input.subject)}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      'Content-Transfer-Encoding: 7bit',
+      '',
+      input.html,
+    ].join('\r\n'),
+  )
+
+  const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ raw }),
+  })
+
+  if (!sendRes.ok) {
+    const text = await sendRes.text()
+    return { ok: false, error: `Gmail API send error (${sendRes.status}): ${text.slice(0, 200)}` }
+  }
+  return { ok: true }
+}
+
+async function sendViaResend(
+  env: DigestEnv,
+  input: { to: string; subject: string; html: string },
+): Promise<{ ok: boolean; error?: string }> {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from,
+      from: env.DIGEST_FROM_EMAIL,
       to: [input.to],
       subject: input.subject,
       html: input.html,
     }),
   })
-
   if (!res.ok) {
     const text = await res.text()
     return { ok: false, error: `Resend error (${res.status}): ${text.slice(0, 200)}` }
   }
   return { ok: true }
+}
+
+function toBase64Url(text: string): string {
+  const bytes = new TextEncoder().encode(text)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!)
+  const b64 = btoa(binary)
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+/** Encode Subject for non-ASCII safely (RFC 2047). */
+function encodeRfc2047(subject: string): string {
+  if (/^[\x20-\x7E]*$/.test(subject)) return subject
+  const b64 = btoa(unescape(encodeURIComponent(subject)))
+  return `=?UTF-8?B?${b64}?=`
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Props {
   apiKey: string
@@ -9,6 +9,10 @@ export function ApiKeyPanel({ apiKey, onSave }: Props) {
   const [draft, setDraft] = useState(apiKey)
   const [visible, setVisible] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setDraft(apiKey)
+  }, [apiKey])
 
   function handleSave() {
     onSave(draft.trim())

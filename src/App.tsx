@@ -12,7 +12,7 @@ import {
   exportJobsCsv,
   searchJobs,
 } from './lib/api'
-import { DigestPanel } from './components/DigestPanel'
+import { ClearDataPanel } from './components/ClearDataPanel'
 import {
   DEFAULT_VIEW_FILTERS,
   filterAndSortJobs,
@@ -26,7 +26,14 @@ import {
   type SavedSearch,
   upsertSavedSearch,
 } from './lib/savedSearches'
-import { FILTERS_KEY, loadApiKey, loadJson, saveApiKey, saveJson } from './lib/storage'
+import {
+  clearLocalStorage,
+  FILTERS_KEY,
+  loadApiKey,
+  loadJson,
+  saveApiKey,
+  saveJson,
+} from './lib/storage'
 import { applyTheme, DEFAULT_THEME, loadTheme, saveTheme, type Theme } from './lib/theme'
 import { DEFAULT_FILTERS, type JobPosting, type SearchFilters } from './lib/types'
 import { LazyImage } from './components/LazyImage'
@@ -263,6 +270,42 @@ export default function App() {
     downloadText(`job-scout-${stamp}.csv`, csv)
   }
 
+  function resetResultState() {
+    setJobs([])
+    setQuery('')
+    setQueries(undefined)
+    setError(undefined)
+    setWarning(undefined)
+    setCreditsUsed(undefined)
+    setRawCount(undefined)
+    setFanOutCount(undefined)
+    setViewFilters(DEFAULT_VIEW_FILTERS)
+    setEnrichingId(null)
+    setCheckingActive(false)
+    setCheckingActiveId(null)
+    setLoading(false)
+  }
+
+  function handleClearResults() {
+    resetResultState()
+  }
+
+  function handleClearHistory() {
+    resetResultState()
+    setFilters(DEFAULT_FILTERS)
+    saveJson(FILTERS_KEY, DEFAULT_FILTERS)
+    setSaved([])
+    persistSavedSearches([])
+  }
+
+  function handleClearAll() {
+    clearLocalStorage({ keepTheme: true })
+    resetResultState()
+    setApiKey('')
+    setFilters(DEFAULT_FILTERS)
+    setSaved([])
+  }
+
   return (
     <div className="app">
       <div className="topbar">
@@ -307,12 +350,18 @@ export default function App() {
             onDelete={handleDeleteSearch}
             onSearch={handleRunSaved}
           />
-          <DigestPanel apiKey={apiKey} filters={filters} />
           <SearchForm
             filters={filters}
             loading={loading}
             onChange={handleFilters}
             onSubmit={handleSearch}
+          />
+          <ClearDataPanel
+            hasResults={jobs.length > 0 || Boolean(query) || Boolean(error)}
+            hasSavedSearches={saved.length > 0}
+            onClearResults={handleClearResults}
+            onClearHistory={handleClearHistory}
+            onClearAll={handleClearAll}
           />
         </div>
         <div className="col">
